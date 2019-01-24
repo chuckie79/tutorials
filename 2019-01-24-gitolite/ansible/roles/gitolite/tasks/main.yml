@@ -1,0 +1,62 @@
+---
+- name: install packages
+  apt:
+    name: ['git-core', 'gitolite3']
+    update_cache: yes
+
+- name: create group
+  group:
+    name: "{{ git_group }}"
+    state: present
+
+- name: create user
+  user:
+    name: "{{ git_user }}"
+    group: "{{ git_group }}"
+    home: "{{ git_home }}"
+    shell: /bin/bash
+    state: present
+
+- name: check to see if gitolite has already been setup
+  stat:
+    path: "{{ git_home }}/.gitolite"
+  register: st
+
+- name: generate an ssh keypair for the admin user
+  shell: echo 'y' | ssh-keygen -q -t rsa -f /tmp/admin -C '' -N ''
+  become_user: "{{ git_user }}"
+  when: st.stat.isfile is not defined or st.stat.isfile == False
+
+- name: change file permissions of ssh keypair
+  file:
+    path: /tmp/{{ item }}
+    mode: 0600
+  with_items:
+    - admin
+    - admin.pub
+  when: st.stat.isfile is not defined or st.stat.isfile == False
+
+- name: setup gitolite
+  command: gitolite setup --pubkey /tmp/admin.pub
+  become_user: "{{ git_user }}"
+  when: st.stat.isfile is not defined or st.stat.isfile == False
+
+- name: fetch ssh keypair
+  fetch:
+    src: /tmp/{{ item }}
+    dest: ../ssh/{{ item }}
+    flat: true
+  with_items:
+    - admin
+    - admin.pub
+  when: st.stat.isfile is not defined or st.stat.isfile == False
+
+- name: delete keypair from server
+  file:
+    path: /tmp/{{ item }}
+    state: absent
+  with_items:
+    - admin
+    - admin.pub
+  when: st.stat.isfile is not defined or st.stat.isfile == False
+

@@ -1,0 +1,5 @@
+---
+git_user: git
+git_group: git
+git_home: /home/{{ git_user }}
+

@@ -1,0 +1,7 @@
+# vagrant
+.vagrant/
+*-cloudimg-console.log
+
+# ansible
+*.retry
+
